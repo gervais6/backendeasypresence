@@ -13,10 +13,12 @@
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
+    "dayjs": "^1.11.18",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.12.1",
+    "node-cron": "^4.2.1",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {

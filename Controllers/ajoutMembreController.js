@@ -14,22 +14,30 @@ exports.createMembre = async (req, res) => {
 };
 
 // Obtenir tous les membres et réinitialiser le statut "present" si besoin
+// Obtenir tous les membres (sans réinitialiser 'present')
 exports.getAllMembres = async (req, res) => {
   try {
-    const membres = await AjoutMembre.find();
     const today = new Date().toISOString().split('T')[0];
+    const membres = await AjoutMembre.find();
 
-    // Réinitialiser le statut "present" pour le dashboard
-    for (let m of membres) {
-      if (m.lastScan !== today) m.present = false;
-      await m.save();
-    }
+    // Mettre à jour présent selon lastScan
+    const updated = membres.map(m => {
+      if (m.lastScan === today) {
+        m.present = true;
+      } else {
+        m.present = false; // facultatif, si tu veux réinitialiser seulement au serveur
+      }
+      return m;
+    });
 
-    res.json(membres);
+    res.json(updated);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Erreur lors de la récupération des membres" });
   }
 };
+
+
 
 // Obtenir un membre par ID
 exports.getMembreById = async (req, res) => {
@@ -69,6 +77,7 @@ exports.deleteMembre = async (req, res) => {
 };
 
 // Scanner / marquer la présence
+// Scanner / marquer la présence
 exports.scanQr = async (req, res) => {
   try {
     const { id } = req.body; 
@@ -88,6 +97,7 @@ exports.scanQr = async (req, res) => {
     // Mettre à jour le statut actuel
     membre.present = true;
     membre.lastScan = today;
+    membre.day = today; // <--- ICI on met à jour le "jour"
 
     await membre.save();
     res.status(200).json(membre);
