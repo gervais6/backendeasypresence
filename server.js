@@ -4,14 +4,17 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const cron = require('node-cron');
 const dayjs = require('dayjs');
-
+const scanRoutes = require("./Routes/scanRoutes");
 const authRoutes = require('./Routes/auth');
-const ajoutMembreRoutes = require('./Routes/ajoutMembreRoutes'); 
-const AjoutMembre = require('./Models/AjoutMembre'); // <- ton modèle Mongoose
 
 const app = express();
 const PORT = process.env.PORT || 8000;
 
+app.use("/api/scan", scanRoutes);
+app.use(cors({
+  origin: 'http://localhost:3000', // autoriser ton frontend
+  credentials: true,
+}));
 app.use(cors());
 app.use(express.json({ limit: "10mb" })); // pour accepter les QR en base64
 
@@ -23,9 +26,6 @@ mongoose.connect(mongoDBURL, { useUnifiedTopology: true, useNewUrlParser: true }
 
 // ---------- Routes ----------
 app.use('/api/auth', authRoutes);
-app.use('/api', ajoutMembreRoutes);
-app.use('/api/membres', ajoutMembreRoutes);
-
 app.get('/', (req, res) => res.send('Bienvenue sur l\'API'));
 
 // ---------- Fonction pour marquer absences manquées ----------
