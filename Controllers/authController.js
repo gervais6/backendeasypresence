@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 // Inscription Admin
 // ====================
 const registerAdmin = async (req, res) => {
-  const { name, email, password, phone, qg } = req.body;
+  const { name, email, password, qg, position, number } = req.body;
 
   try {
     if (!name || !email || !password) {
@@ -15,7 +15,15 @@ const registerAdmin = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ name, email, password: hashedPassword, role: 'admin', phone, qg });
+    const user = new User({ 
+      name, 
+      email, 
+      password: hashedPassword, 
+      role: 'admin', 
+      qg,
+      position,
+      number
+    });
 
     await user.save();
     res.status(201).json({ message: "Admin créé avec succès", userId: user._id });
@@ -35,7 +43,7 @@ const registerAdmin = async (req, res) => {
 // Inscription Utilisateur
 // ====================
 const registerUser = async (req, res) => {
-  const { name, email, password, role, phone, qg } = req.body;
+  const { name, email, password, role, number, qg, position } = req.body;
 
   try {
     if (!name || !email || !password || !role) {
@@ -43,7 +51,15 @@ const registerUser = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ name, email, password: hashedPassword, role, phone, qg });
+    const user = new User({ 
+      name, 
+      email, 
+      password: hashedPassword, 
+      role, 
+      number,   // <-- corrigé
+      qg,
+      position  // facultatif
+    });
 
     await user.save();
     res.status(201).json({ message: 'Utilisateur créé avec succès', userId: user._id });
@@ -58,6 +74,7 @@ const registerUser = async (req, res) => {
     res.status(500).json({ message: 'Erreur du serveur.', error: error.message });
   }
 };
+
 
 // ====================
 // Mise à jour utilisateur

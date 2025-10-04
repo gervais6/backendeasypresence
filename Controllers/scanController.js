@@ -1,7 +1,8 @@
 const User = require("../Models/User");
 const Entreprise = require("../Models/Entreprise");
+const Presence = require("../Models/Presence");
+const dayjs = require("dayjs");
 
-// Scanner le QR code de l'entreprise
 const scanEntreprise = async (req, res) => {
   try {
     const { userId, qrCodeEntreprise } = req.body;
@@ -14,16 +15,29 @@ const scanEntreprise = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "Utilisateur introuvable" });
 
-    // Mettre à jour la présence
-    user.present = true;
-    user.lastScan = new Date();
-    user.history = user.history || [];
-    user.history.push({ date: new Date(), present: true });
-    await user.save();
+    const today = dayjs().format("YYYY-MM-DD");
+    const currentTime = dayjs().format("HH:mm:ss");
 
-    return res.json({ message: `Présence enregistrée pour ${user.name}` });
+    // Vérifier si déjà enregistré aujourd’hui
+    let presence = await Presence.findOne({ userId: user._id, date: today });
+
+    if (presence) {
+      return res.json({ message: "Présence déjà enregistrée aujourd'hui" });
+    }
+
+    // Créer une nouvelle présence
+    presence = new Presence({
+      userId: user._id,
+      date: today,
+      present: true,
+      time: currentTime
+    });
+
+    await presence.save();
+
+    return res.json({ message: `Présence enregistrée pour ${user.name}`, presence });
   } catch (err) {
-    console.error(err);
+    console.error("Erreur scanEntreprise:", err);
     return res.status(500).json({ message: "Erreur serveur" });
   }
 };
