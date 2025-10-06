@@ -1,79 +1,83 @@
-// server.js
-require('dotenv').config();
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const cron = require('node-cron');
-const dayjs = require('dayjs');
+require("dotenv").config();
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+const cron = require("node-cron");
+const dayjs = require("dayjs");
+
+// Importation des routes et modèles
 const scanRoutes = require("./Routes/scanRoutes");
-const authRoutes = require('./Routes/auth');
-const AjoutMembre = require('./Models/User'); // Assure-toi que le modèle existe
+const authRoutes = require("./Routes/auth");
 const presenceRoutes = require("./Routes/presenceRoutes");
+const AjoutMembre = require("./Models/User");
 const Entreprise = require("./Models/Entreprise");
 
 const app = express();
 const PORT = process.env.PORT || 8000;
 
 // ---------- Middleware ----------
-app.use(express.json({ limit: "10mb" })); // Pour accepter les QR en base64
+app.use(express.json({ limit: "10mb" }));
 
-// ✅ CORS configuration unique
-const allowedOrigins = [
-  'http://localhost:3000',        // quand tu fais npm start
-  'http://192.168.1.2:50395'  ,    // quand tu sers le build avec serve
-  'http://192.168.1.2:3000',     // si tu accèdes au frontend depuis ton mobile
-  'http://192.168.1.2:8000',     // si tu appelles directement le backend
-];
+// ✅ CORS : autorise localhost, 127.0.0.1 et toutes les IP locales
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Si aucune origine (ex: Postman) => ok
+      if (!origin) return callback(null, true);
 
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
-}));
+      // Autoriser localhost, 127.0.0.1 et IP locales 192.168.x.x
+      if (
+        origin.startsWith("http://localhost") ||
+        origin.startsWith("http://127.0.0.1") ||
+        origin.match(/^http:\/\/192\.168\.\d+\.\d+/)
+      ) {
+        return callback(null, true);
+      }
+
+      console.error("❌ Not allowed by CORS:", origin);
+      callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
 
 // ---------- Connexion MongoDB ----------
-const mongoDBURL = process.env.MONGODB_URL || 'mongodb://127.0.0.1:27017/mydemoDB';
-mongoose.connect(mongoDBURL, { useUnifiedTopology: true, useNewUrlParser: true })
-  .then(() => console.log('✅ Connexion à MongoDB réussie'))
-  .catch(err => console.error('❌ Erreur de connexion à MongoDB:', err));
+const mongoDBURL =
+  process.env.MONGODB_URL || "mongodb://127.0.0.1:27017/mydemoDB";
 
+mongoose
+  .connect(mongoDBURL)
+  .then(() => console.log("✅ Connexion à MongoDB réussie"))
+  .catch((err) => console.error("❌ Erreur de connexion à MongoDB:", err));
 
-
-   // Initialisation de l'entreprise principale
-    const initEntreprise = async () => {
-      try {
-        const entrepriseExist = await Entreprise.findOne({ qrCode: "company_123" });
-        if (!entrepriseExist) {
-          const entreprise = new Entreprise({
-            name: "MaEntreprise",
-            qrCode: "company_123"
-          });
-          await entreprise.save();
-          console.log("Entreprise principale créée !");
-        } else {
-          console.log("Entreprise principale déjà existante.");
-        }
-      } catch (err) {
-        console.error("Erreur création entreprise :", err);
-      }
-    };
-
-    initEntreprise();
+// ---------- Initialisation entreprise ----------
+const initEntreprise = async () => {
+  try {
+    const entrepriseExist = await Entreprise.findOne({ qrCode: "company_123" });
+    if (!entrepriseExist) {
+      const entreprise = new Entreprise({
+        name: "MaEntreprise",
+        qrCode: "company_123",
+      });
+      await entreprise.save();
+      console.log("🏢 Entreprise principale créée !");
+    } else {
+      console.log("🏢 Entreprise principale déjà existante.");
+    }
+  } catch (err) {
+    console.error("❌ Erreur création entreprise :", err);
+  }
+};
+initEntreprise();
 
 // ---------- Routes ----------
-app.use('/api/auth', authRoutes);
+app.use("/api/auth", authRoutes);
 app.use("/api/scan", scanRoutes);
 app.use("/api/presences", presenceRoutes);
 
+app.get("/", (req, res) => res.send("🚀 Bienvenue sur l'API Présence"));
 
-app.get('/', (req, res) => res.send('Bienvenue sur l\'API'));
-
-// ---------- Fonction pour marquer absences manquées ----------
+// ---------- Fonction de mise à jour des absences ----------
 const markMissedAbsences = async () => {
   try {
     const membres = await AjoutMembre.find();
@@ -81,43 +85,39 @@ const markMissedAbsences = async () => {
 
     for (const membre of membres) {
       membre.history = membre.history || [];
-
       const lastDate = membre.history.length
         ? dayjs(membre.history[membre.history.length - 1].date)
-        : today.subtract(1, 'day');
+        : today.subtract(1, "day");
 
-      let startDate = lastDate.add(1, 'day');
-
-      while (startDate.isBefore(today, 'day')) {
-        const dateStr = startDate.format('YYYY-MM-DD');
-        if (!membre.history.some(h => h.date === dateStr)) {
+      let startDate = lastDate.add(1, "day");
+      while (startDate.isBefore(today, "day")) {
+        const dateStr = startDate.format("YYYY-MM-DD");
+        if (!membre.history.some((h) => h.date === dateStr)) {
           membre.history.push({ date: dateStr, present: false });
           console.log(`❌ Absence automatique pour ${membre.name} le ${dateStr}`);
         }
-        startDate = startDate.add(1, 'day');
+        startDate = startDate.add(1, "day");
       }
 
-      // Mettre à jour le statut présent du jour
-      membre.present = membre.history.some(h => h.date === today.format('YYYY-MM-DD') && h.present);
+      membre.present = membre.history.some(
+        (h) => h.date === today.format("YYYY-MM-DD") && h.present
+      );
+
       await membre.save();
     }
 
-    console.log("✅ Toutes les absences manquées ont été mises à jour");
+    console.log("✅ Absences manquées mises à jour !");
   } catch (err) {
-    console.error("❌ Erreur lors de la mise à jour des absences manquées :", err);
+    console.error("❌ Erreur lors de la mise à jour des absences :", err);
   }
 };
 
-// ---------- Mise à jour au démarrage ----------
+// ---------- Exécution immédiate + Cron ----------
 markMissedAbsences();
-
-// ---------- Cron minuit ----------
-cron.schedule('0 0 * * *', async () => {
-  console.log("⏰ Cron de minuit : mise à jour des absences");
+cron.schedule("0 0 * * *", async () => {
+  console.log("⏰ Cron minuit : mise à jour des absences...");
   await markMissedAbsences();
 });
 
-
-   
-// ---------- Démarrage serveur ----------
-app.listen(PORT, () => console.log(`🚀 Server started at port ${PORT}`));
+// ---------- Lancement serveur ----------
+app.listen(PORT, () => console.log(`🚀 Serveur démarré sur le port ${PORT}`));
