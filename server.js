@@ -18,17 +18,22 @@ const PORT = process.env.PORT || 8000;
 // ---------- Middleware ----------
 app.use(express.json({ limit: "10mb" }));
 
-// ✅ CORS : autorise localhost, 127.0.0.1 et toutes les IP locales
+// ✅ Configuration CORS — autorise Vercel + Localhost
+const allowedOrigins = [
+  "https://fronteasypresence.vercel.app", // ton frontend déployé
+  "http://localhost:3000", // pour développement
+  "http://127.0.0.1:3000",
+];
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Si aucune origine (ex: Postman) => ok
+      // Autorise Postman ou requêtes internes
       if (!origin) return callback(null, true);
 
-      // Autoriser localhost, 127.0.0.1 et IP locales 192.168.x.x
+      // Vérifie si l'origine est autorisée
       if (
-        origin.startsWith("http://localhost") ||
-        origin.startsWith("http://127.0.0.1") ||
+        allowedOrigins.includes(origin) ||
         origin.match(/^http:\/\/192\.168\.\d+\.\d+/)
       ) {
         return callback(null, true);
@@ -50,7 +55,7 @@ mongoose
   .then(() => console.log("✅ Connexion à MongoDB réussie"))
   .catch((err) => console.error("❌ Erreur de connexion à MongoDB:", err));
 
-// ---------- Initialisation entreprise ----------
+// ---------- Initialisation de l'entreprise ----------
 const initEntreprise = async () => {
   try {
     const entrepriseExist = await Entreprise.findOne({ qrCode: "company_123" });
@@ -77,7 +82,7 @@ app.use("/api/presences", presenceRoutes);
 
 app.get("/", (req, res) => res.send("🚀 Bienvenue sur l'API Présence"));
 
-// ---------- Fonction de mise à jour des absences ----------
+// ---------- Fonction de mise à jour automatique des absences ----------
 const markMissedAbsences = async () => {
   try {
     const membres = await AjoutMembre.find();
@@ -119,5 +124,5 @@ cron.schedule("0 0 * * *", async () => {
   await markMissedAbsences();
 });
 
-// ---------- Lancement serveur ----------
+// ---------- Lancement du serveur ----------
 app.listen(PORT, () => console.log(`🚀 Serveur démarré sur le port ${PORT}`));
