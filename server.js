@@ -25,7 +25,7 @@ const allowedOrigins = [
   "http://127.0.0.1:3000",                 // Dev web
   "http://localhost:8081",                 // Expo web
   "http://10.0.2.2:8081",                  // Android Emulator
-  "http://192.168.1.4:8081",               // Mobile réel local
+  "http://192.168.1.3:8081",               // Mobile réel local
 ];
 
 app.use(
