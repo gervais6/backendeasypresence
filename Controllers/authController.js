@@ -8,7 +8,10 @@ const path = require('path');
 // ====================
 const registerAdmin = async (req, res) => {
   const { name, email, password, qg, position, number } = req.body;
-  const image = req.file ? `/uploads/users/${req.file.filename}` : "";
+  // Génération URL complète de l'image
+  const imageUrl = req.file
+    ? `${req.protocol}://${req.get('host')}/uploads/users/${req.file.filename}`
+    : "";
 
   try {
     if (!name || !email || !password) {
@@ -24,19 +27,17 @@ const registerAdmin = async (req, res) => {
       qg,
       position,
       number,
-      image
+      image: imageUrl
     });
 
     await user.save();
-    res.status(201).json({ message: "Admin créé avec succès", userId: user._id });
+    res.status(201).json({ message: "Admin créé avec succès", userId: user._id, imageUrl });
 
   } catch (error) {
-    console.error("Erreur lors de l'inscription admin :", error);
-
+    console.error("Erreur registerAdmin :", error);
     if (error.code === 11000 && error.keyPattern.email) {
       return res.status(400).json({ message: 'Cet email est déjà utilisé.' });
     }
-
     res.status(500).json({ message: 'Erreur du serveur.', error: error.message });
   }
 };
@@ -46,7 +47,9 @@ const registerAdmin = async (req, res) => {
 // ====================
 const registerUser = async (req, res) => {
   const { name, email, password, role, number, qg, position } = req.body;
-  const image = req.file ? `/uploads/users/${req.file.filename}` : "";
+  const imageUrl = req.file
+    ? `${req.protocol}://${req.get('host')}/uploads/users/${req.file.filename}`
+    : "";
 
   try {
     if (!name || !email || !password || !role) {
@@ -62,19 +65,17 @@ const registerUser = async (req, res) => {
       number,
       qg,
       position,
-      image
+      image: imageUrl
     });
 
     await user.save();
-    res.status(201).json({ message: 'Utilisateur créé avec succès', userId: user._id });
+    res.status(201).json({ message: 'Utilisateur créé avec succès', userId: user._id, imageUrl });
 
   } catch (error) {
-    console.error('Erreur lors de l\'inscription utilisateur :', error);
-
+    console.error('Erreur registerUser :', error);
     if (error.code === 11000 && error.keyPattern.email) {
       return res.status(400).json({ message: 'Cet email est déjà utilisé.' });
     }
-
     res.status(500).json({ message: 'Erreur du serveur.', error: error.message });
   }
 };
@@ -85,7 +86,9 @@ const registerUser = async (req, res) => {
 const updateUser = async (req, res) => {
   const { id } = req.params;
   const { name, position, number, qg, email, role } = req.body;
-  const image = req.file ? `/uploads/users/${req.file.filename}` : null;
+  const imageUrl = req.file
+    ? `${req.protocol}://${req.get('host')}/uploads/users/${req.file.filename}`
+    : null;
 
   try {
     const user = await User.findById(id);
@@ -102,13 +105,13 @@ const updateUser = async (req, res) => {
     user.number = number || user.number;
     user.qg = qg || user.qg;
     user.role = role || user.role;
-    if (image) user.image = image;
+    if (imageUrl) user.image = imageUrl;
 
     await user.save();
-    res.json({ message: 'Utilisateur mis à jour avec succès.', user });
+    res.json({ message: 'Utilisateur mis à jour avec succès.', user: { ...user._doc, imageUrl: user.image } });
 
   } catch (error) {
-    console.error('Erreur update user:', error);
+    console.error('Erreur updateUser :', error);
     res.status(500).json({ message: 'Erreur serveur.', error: error.message });
   }
 };
@@ -133,7 +136,7 @@ const login = async (req, res) => {
     res.json({ token, role: user.role, userId: user._id });
 
   } catch (error) {
-    console.error('Erreur lors de la connexion :', error);
+    console.error('Erreur login :', error);
     res.status(500).json({ message: 'Erreur du serveur.', error: error.message });
   }
 };
