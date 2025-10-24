@@ -1,13 +1,14 @@
-// Controllers/authController.js
 const User = require('../Models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const path = require('path');
 
 // ====================
 // Inscription Admin
 // ====================
 const registerAdmin = async (req, res) => {
   const { name, email, password, qg, position, number } = req.body;
+  const image = req.file ? `/uploads/users/${req.file.filename}` : "";
 
   try {
     if (!name || !email || !password) {
@@ -15,21 +16,22 @@ const registerAdmin = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ 
-      name, 
-      email, 
-      password: hashedPassword, 
-      role: 'admin', 
+    const user = new User({
+      name,
+      email,
+      password: hashedPassword,
+      role: 'admin',
       qg,
       position,
-      number
+      number,
+      image
     });
 
     await user.save();
     res.status(201).json({ message: "Admin créé avec succès", userId: user._id });
 
   } catch (error) {
-    console.error('Erreur lors de l\'inscription admin :', error);
+    console.error("Erreur lors de l'inscription admin :", error);
 
     if (error.code === 11000 && error.keyPattern.email) {
       return res.status(400).json({ message: 'Cet email est déjà utilisé.' });
@@ -44,6 +46,7 @@ const registerAdmin = async (req, res) => {
 // ====================
 const registerUser = async (req, res) => {
   const { name, email, password, role, number, qg, position } = req.body;
+  const image = req.file ? `/uploads/users/${req.file.filename}` : "";
 
   try {
     if (!name || !email || !password || !role) {
@@ -51,14 +54,15 @@ const registerUser = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ 
-      name, 
-      email, 
-      password: hashedPassword, 
-      role, 
-      number,   // <-- corrigé
+    const user = new User({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      number,
       qg,
-      position  // facultatif
+      position,
+      image
     });
 
     await user.save();
@@ -75,13 +79,13 @@ const registerUser = async (req, res) => {
   }
 };
 
-
 // ====================
 // Mise à jour utilisateur
 // ====================
 const updateUser = async (req, res) => {
   const { id } = req.params;
   const { name, position, number, qg, email, role } = req.body;
+  const image = req.file ? `/uploads/users/${req.file.filename}` : null;
 
   try {
     const user = await User.findById(id);
@@ -98,6 +102,7 @@ const updateUser = async (req, res) => {
     user.number = number || user.number;
     user.qg = qg || user.qg;
     user.role = role || user.role;
+    if (image) user.image = image;
 
     await user.save();
     res.json({ message: 'Utilisateur mis à jour avec succès.', user });
@@ -109,7 +114,7 @@ const updateUser = async (req, res) => {
 };
 
 // ====================
-// Connexion
+// Connexion, Récupération, Suppression
 // ====================
 const login = async (req, res) => {
   const { email, password } = req.body;
@@ -133,13 +138,9 @@ const login = async (req, res) => {
   }
 };
 
-
-// ====================
-// Récupérer tous les utilisateurs
-// ====================
 const getUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password"); // on masque les mots de passe
+    const users = await User.find().select("-password");
     res.json(users);
   } catch (error) {
     console.error("Erreur getUsers :", error);
@@ -147,10 +148,6 @@ const getUsers = async (req, res) => {
   }
 };
 
-
-// ====================
-// Supprimer un utilisateur
-// ====================
 const deleteUser = async (req, res) => {
   const { id } = req.params;
 
@@ -166,9 +163,4 @@ const deleteUser = async (req, res) => {
   }
 };
 
-
-
-// ====================
-// Export des fonctions
-// ====================
-module.exports = { registerAdmin, registerUser, updateUser, login,  getUsers, deleteUser };
+module.exports = { registerAdmin, registerUser, updateUser, login, getUsers, deleteUser };

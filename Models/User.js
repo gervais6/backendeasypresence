@@ -6,10 +6,11 @@ const UserSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     role: { type: String, enum: ["admin", "employe"], required: true }, // Rôle 
-    number: { type: String },    // numéro
-    position: { type: String },  // position                    // Téléphone, seulement pour employé
+    number: { type: String },                      // Numéro de téléphone
+    position: { type: String },                    // Poste
     qg: { type: String },                          // Département ou QG
     qrCode: { type: String },                      // QR code unique pour l'employé
+    image: { type: String, default: "" },          // URL ou chemin de l'image de profil
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", UserSchema);
