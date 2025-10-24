@@ -4,10 +4,11 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const cron = require("node-cron");
 const dayjs = require("dayjs");
+const path = require("path");
 
-// Importation des routes et modèles
-const scanRoutes = require("./Routes/scanRoutes");
+// Import des routes et modèles
 const authRoutes = require("./Routes/auth");
+const scanRoutes = require("./Routes/scanRoutes");
 const presenceRoutes = require("./Routes/presenceRoutes");
 const User = require("./Models/User");
 const Entreprise = require("./Models/Entreprise");
@@ -17,24 +18,26 @@ const PORT = process.env.PORT || 8000;
 
 // ---------- Middleware ----------
 app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
+
+// ---------- Static folder pour les images ----------
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ---------- CORS ----------
 const allowedOrigins = [
-  "https://fronteasypresence.vercel.app", // Frontend déployé
-  "http://localhost:3000",                 // Dev web
-  "http://127.0.0.1:3000",                 // Dev web
-  "http://localhost:8081",                 // Expo web
-  "http://10.0.2.2:8081",                  // Android Emulator
-  "http://192.168.1.3:8081",               // Mobile réel local
+  "https://fronteasypresence.vercel.app",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://localhost:8081",
+  "http://10.0.2.2:8081",
+  "http://192.168.1.3:8081",
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // Postman / serveur interne
-
+      if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
-
       console.error("❌ Not allowed by CORS:", origin);
       callback(new Error("Not allowed by CORS"));
     },
@@ -45,11 +48,8 @@ app.use(
 );
 
 // ---------- Connexion MongoDB ----------
-const mongoDBURL =
-  process.env.MONGODB_URL || "mongodb://127.0.0.1:27017/mydemoDB";
-
 mongoose
-  .connect(mongoDBURL)
+  .connect(process.env.MONGODB_URL || "mongodb://127.0.0.1:27017/mydemoDB")
   .then(() => console.log("✅ Connexion à MongoDB réussie"))
   .catch((err) => console.error("❌ Erreur de connexion à MongoDB:", err));
 
@@ -89,7 +89,7 @@ const markMissedAbsences = async () => {
     for (const user of users) {
       user.history = user.history || [];
       const lastDate = user.history.length
-        ? dayjs(user.history[user.history.length - 1].date)
+        ? dayjs(user.history[user.history.length - 1].date, "YYYY-MM-DD")
         : today.subtract(1, "day");
 
       let startDate = lastDate.add(1, "day");
@@ -115,7 +115,7 @@ const markMissedAbsences = async () => {
   }
 };
 
-// ---------- Exécution immédiate + Cron ----------
+// ---------- Cron minuit ----------
 markMissedAbsences();
 cron.schedule("0 0 * * *", async () => {
   console.log("⏰ Cron minuit : mise à jour des absences...");
