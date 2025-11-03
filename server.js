@@ -26,11 +26,18 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // ---------- CORS ----------
 const allowedOrigins = [
   "https://fronteasypresence.vercel.app",
+  "https://fronteasypresence-git-hr-gervais6s-projects.vercel.app",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
   "http://localhost:8081",
+  "http://127.0.0.1:8081",
   "http://10.0.2.2:8081",
   "http://192.168.1.3:8081",
+  "http://192.168.1.4:8081",
+  "http://192.168.1.30:8081", // ← AJOUTEZ VOTRE IP ACTUELLE
+  "exp://192.168.1.3:8081",
+  "exp://192.168.1.4:8081", 
+  "exp://192.168.1.30:8081", // ← AJOUTEZ POUR EXPO
 ];
 
 app.use(
@@ -38,6 +45,14 @@ app.use(
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
+      
+      // Autoriser aussi les variantes d'IP
+      if (origin.includes('192.168.1.30') || 
+          origin.includes('//192.168.1.30') ||
+          origin.startsWith('exp://192.168.1.30')) {
+        return callback(null, true);
+      }
+      
       console.error("❌ Not allowed by CORS:", origin);
       callback(new Error("Not allowed by CORS"));
     },
@@ -77,6 +92,17 @@ initEntreprise();
 app.use("/api/auth", authRoutes);
 app.use("/api/scan", scanRoutes);
 app.use("/api/presences", presenceRoutes);
+
+// Route de test pour mobile
+app.get("/api/mobile-test", (req, res) => {
+  console.log("✅ Requête mobile reçue de:", req.headers.origin);
+  res.json({ 
+    success: true, 
+    message: "Backend accessible depuis mobile!",
+    origin: req.headers.origin,
+    timestamp: new Date().toISOString()
+  });
+});
 
 app.get("/", (req, res) => res.send("🚀 Bienvenue sur l'API Présence"));
 
