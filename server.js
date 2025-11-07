@@ -26,7 +26,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // ---------- CORS ----------
 const allowedOrigins = [
   "https://fronteasypresence.vercel.app",
-  "https://fronteasypresence-git-hr-gervais6s-projects.vercel.app",
+  "https://fronteasypresence-gervais6s-projects.vercel.app/",
   "https://fronteasypresence2025.vercel.app",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
